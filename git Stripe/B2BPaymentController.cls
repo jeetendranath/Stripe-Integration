@@ -1,0 +1,152 @@
+public with sharing class B2BPaymentController {
+
+    @AuraEnabled
+    public static map<String,Object> getPaymentInfo(map<String,Object> dataMap){
+        String methodName = 'getPaymentInfo';
+        String supportData = '';
+        try{
+            dataMap = B2BStripeIntegrationController.getPaymentOptions(dataMap);
+        } catch (Exception ex) {
+            dataMap = dataMap==null ? new Map<String,Object>() : dataMap ;
+            dataMap.put(B2BConstants.IS_SUCCESS,false);
+            dataMap.put(B2BConstants.MESSAGE,ex.getMessage()+' '+ex.getStackTraceString());
+        }
+        return dataMap;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static string getVFOrigin() {
+       
+       return 'https://training202104--jjakkamset.sandbox.my.site.com';
+    }
+
+    @AuraEnabled
+    public static map<String,Object> setPaymentInfo(map<String,Object> dataMap){
+        String methodName = 'setPaymentInfo';
+        String supportData = '';
+        try{
+            dataMap = B2BStripeIntegrationController.setPaymentInfo(dataMap);
+        } catch (Exception ex) {
+            dataMap = dataMap==null ? new Map<String,Object>() : dataMap ;
+            dataMap.put(B2BConstants.IS_SUCCESS,false);
+            dataMap.put(B2BConstants.MESSAGE,ex.getMessage());
+        }
+        return dataMap;
+    }
+
+    @AuraEnabled
+    public static map<String,Object> updatePaymentAuthError(map<String,Object> dataMap){
+        String methodName = 'updatePaymentAuthError';
+        String supportData = '';
+        try{
+            String paId = (String)dataMap.get('paId') ;
+            List<PaymentAuthorization> paList = [SELECT Id, Status, GatewayAuthCode, SfResultCode FROM PaymentAuthorization WHERE Id =: paId LIMIT 100];
+            for(PaymentAuthorization pa: paList){ pa.status = 'Canceled';
+            }
+            if(!paList.isEmpty()){ update paList;
+            }
+        } catch (Exception ex) {
+            dataMap = dataMap==null ? new Map<String,Object>() : dataMap ;
+            dataMap.put(B2BConstants.IS_SUCCESS,false);
+            dataMap.put(B2BConstants.MESSAGE,ex.getMessage());
+        }finally
+        {
+            //B2BUtils.handleApplicationLogging(dataMap);
+        }
+        return dataMap;
+    }
+
+    @AuraEnabled
+    public static map<String,Object> submitCreditCardOrder(map<String,Object> dataMap){
+        String methodName = 'submitCreditCardOrder';
+        String supportData = '';
+        try{
+            dataMap = B2BStripeIntegrationController.chargeCustomer(dataMap);
+            updateOrderInformation(dataMap);
+        } catch (Exception ex) {
+            dataMap = dataMap==null ? new Map<String,Object>() : dataMap ;
+            dataMap.put(B2BConstants.IS_SUCCESS,false);
+            dataMap.put(B2BConstants.MESSAGE,ex.getMessage());
+        }finally
+        {
+            //B2BUtils.handleApplicationLogging(dataMap);
+        }
+        return dataMap;
+    }
+
+    public static map<String,Object> updateOrderInformation(map<String,Object> dataMap){
+        String cartId = (String)dataMap.get(B2BConstants.CART_ID) ;
+        String paymentMethod = (String)dataMap.get('paymentMethod') ;
+        List<CartCheckoutSession> sessions = B2BStripeIntegrationController.getActiveCheckoutSessions(cartId);
+            if(!sessions.isEmpty() && String.isNotBlank(sessions.get(0).OrderId)){
+                String orderId = sessions.get(0).OrderId;
+                Order o = new Order();
+                o.Id = orderId;
+                o.Stripe_Transaction_ID__c =  (String)dataMap.get('chargeId')   ;
+                update o;
+            }
+        return dataMap;
+    }
+
+    @AuraEnabled
+    public static Boolean isCreditAvailable(Id cartId){
+        try {
+            List<WebCart> cart = [SELECT AccountId FROM WebCart WHERE Id =: cartId];
+            String accountId = cart[0].AccountId;
+            List<Account> accountList = [SELECT Is_Credit_Available__c FROM account WHERE id =: accountId];
+
+            if(accountList[0].Is_Credit_Available__c == true){
+                return true;
+            }
+            else{
+                return false;
+            }
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static Map<String,Decimal> getCreditLimit(Id cartId){
+        try {
+            List<WebCart> cart = [SELECT AccountId,GrandTotalAmount FROM WebCart WHERE Id =: cartId];
+            String accountId = cart[0].AccountId;
+            List<Account> accountList = [SELECT Credit_Limit__c FROM account WHERE id =: accountId];
+
+            Map<String,Decimal> resultMap= new Map<String,Decimal>();
+
+            resultMap.put('CreditLimit',accountList[0].Credit_Limit__c);
+            resultMap.put('grandTotal',cart[0].GrandTotalAmount);
+
+            return resultMap;
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static Map<String,Decimal> updateAvailableCredit(Id cartId){
+        try {
+            List<WebCart> cart = [SELECT AccountId,GrandTotalAmount FROM WebCart WHERE Id =: cartId];
+            String accountId = cart[0].AccountId;
+            Account accountList = [SELECT Credit_Limit__c FROM account WHERE id =: accountId];
+            
+            Decimal creditLimit  = accountList.Credit_Limit__c - cart[0].GrandTotalAmount;
+            accountList.Credit_Limit__c = creditLimit;
+            update accountList;
+            Map<String,Decimal> resultMap= new Map<String,Decimal>();
+            resultMap.put('updatedCreditLimit',creditLimit);
+            
+            return resultMap;
+
+
+
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+}

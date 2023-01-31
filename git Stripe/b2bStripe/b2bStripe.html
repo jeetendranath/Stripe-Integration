@@ -1,0 +1,68 @@
+<!--
+  @description       : 
+  @author            : Abhishek
+  @group             : RafterOne
+  @last modified on  : 01-13-2023
+  @last modified by  : Abhishek
+  Modifications Log
+  Ver   Date         Author     Modification
+  1.0   01-13-2023   Abhishek   Initial Version
+-->
+<template>
+  <template if:true={showSpinner}>
+		<div>
+			<lightning-spinner alternative-text="Loading..." variant="brand">
+			</lightning-spinner>
+		</div>
+	</template>
+    <div  class="slds-m-top_large fullBody slds-p-around_medium" if:true={canPay} >
+		<div class="slds-p-around_x-small slds-text-title_caps">
+			<h2>Payment</h2>
+			
+		</div>
+		<lightning-tabset if:true={isCreditAvailable}>
+
+			<lightning-tab label="PO Number" onactive={PONumberTab} >
+				<lightning-input class="inputs" type="text" name="PONumber" placeholder="PO Number" onchange={PONumberHandler}></lightning-input>
+				<div class="creditLimit">
+					<Strong>Your Available Credit Balance : </Strong>
+					<lightning-button if:false={hideButton} variant="base" label="View" onmouseover={showValue} onmouseout={hideValue} class="slds-m-left_x-small"></lightning-button>
+					<Strong if:true ={hideButton} onmouseout={hideValue}>{availableCreditLimit}</Strong>
+				</div>
+				
+			</lightning-tab>
+
+			<lightning-tab label="Credit Card" onactive={creditCardTab}>
+				<div class="slds-box slds-box_xx-small boxes" if:true={iframeUrl}>
+					<iframe style="border: none;height: 30px;" width="100%" src={iframeUrl}></iframe>
+				</div>
+			</lightning-tab>
+			
+		</lightning-tabset>
+
+		<lightning-tabset if:false={isCreditAvailable}>
+
+			
+
+			<lightning-tab label="Credit Card" onactive={creditCardTab}>
+				<div  if:true={iframeUrl}>
+					<iframe style="border: none;height: 50px;" width="100%" src={iframeUrl}></iframe>
+				</div>
+			</lightning-tab>
+			
+		</lightning-tabset>
+        
+        <div class="slds-m-top_small">
+			<div class="slds-clearfix">
+				<div class="slds-float_right">
+					<p>
+						<button class="slds-button slds-button--brand checkoutbtnClass slds-p-vertical_xx-small"
+							onclick={submitOrder} type="button">
+							<span class="whiteFont">Place Order</span>
+						</button>
+					</p>
+				</div>
+			</div>
+		</div>
+    </div>
+</template>

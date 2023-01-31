@@ -1,0 +1,28 @@
+.inputs{
+    --slds-c-input-radius-border: 3rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: lighter;
+    color: rgb(130, 131, 133);
+}
+
+.fullBody{
+    background-color:  rgb(231, 231, 231);
+    border-radius: 10px;
+}
+
+h2{
+    font-size: large;
+    font-weight: bolder;
+    text-align: center;
+    color: black;
+}
+
+.creditLimit{
+    font-size: x-small;
+    text-align: center;
+}
+
+.boxes{
+    background-color: white;
+    border-radius: 10px;
+}
